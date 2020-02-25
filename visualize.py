@@ -2,8 +2,6 @@ import json
 
 import matplotlib.pyplot as plt
 import networkx as nx
-from networkx import drawing
-
 
 with open('config/config.json') as config:
     parameters = json.load(config)
@@ -18,6 +16,7 @@ def main():
 
     nodelist = [node for node in G.nodes if G.in_degree(
         node) > parameters['min_indeg']]
+
     edgelist = [edge for edge in G.edges if edge[0]
                 in nodelist and edge[1] in nodelist]
 

@@ -69,18 +69,19 @@ func (g *digraph) containsDomain(d string) bool {
 	return ok
 }
 
-func (g *digraph) getVertex(d string) *vertex {
+func (g *digraph) getVertex(d string) (*vertex, bool) {
 	g.lock.RLock()
-	v, _ := g.vertices[d]
+	v, ok := g.vertices[d]
 	g.lock.RUnlock()
-	return v
+	return v, ok
 }
 
 func (g *digraph) String() string {
 	outdeg := 0
 
 	for v := range g.vertices {
-		outdeg += len(g.getVertex(v).out)
+		t, _ := g.getVertex(v)
+		outdeg += len(t.out)
 	}
 
 	return fmt.Sprintf("number of nodes: %v, number of edges: %v", len(g.vertices), outdeg)

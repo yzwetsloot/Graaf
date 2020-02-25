@@ -2,23 +2,24 @@ package main
 
 import (
 	"fmt"
-	"golang.org/x/net/publicsuffix"
 	"net/http"
 	"net/url"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"golang.org/x/net/html"
+	"golang.org/x/net/publicsuffix"
 )
 
 const (
 	baseURL  string = "https://nl.pepper.com"
-	maxDepth uint16 = 20
+	maxDepth uint16 = 5
 )
 
-var wg   = sync.WaitGroup{}
+var wg = sync.WaitGroup{}
 
 var g = digraph{
 	vertices: map[string]*vertex{},
@@ -30,6 +31,8 @@ var client = http.Client{
 }
 
 func main() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
 	var depth uint16
 
 	start := time.Now()
@@ -52,6 +55,8 @@ func main() {
 	fmt.Println("operation took", time.Since(start))
 
 	g.serialize("graph.txt")
+
+	fmt.Println(g.shortestPath("pepper.com", "nypost.com"))
 }
 
 func retrieve(src string, d uint16, p *vertex) {
@@ -108,15 +113,16 @@ Loop:
 			lock:    sync.RWMutex{},
 		}
 
-		if !g.containsDomain(destTLD) {
+		v, ok := g.getVertex(destTLD)
+
+		if !ok {
 			g.addVertex(&t)
 			p.addOutgoing(&t)
 
 			wg.Add(1)
 			go retrieve(link, d+1, &t)
-		} else {
-			srcTLD, _ := parseTLD(src)
-			g.getVertex(destTLD).addIncoming(g.getVertex(srcTLD))
+		} else if p.element != destTLD {
+			v.addIncoming(p)
 		}
 	}
 }
