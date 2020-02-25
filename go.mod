@@ -1,4 +1,4 @@
-module github.com/yzwetsloot/InterTree
+module github.com/yzwetsloot/Graaf
 
 go 1.13
 

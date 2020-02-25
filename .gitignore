@@ -1,3 +1,4 @@
 config/config.json
 graph.svg
-urls.txt
+graph.txt
+/.idea

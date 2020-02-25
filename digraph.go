@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"sync"
 )
 
@@ -24,22 +25,26 @@ func (v *vertex) addOutgoing(u *vertex) {
 	v.lock.Unlock()
 }
 
-func (v *vertex) customString() string {
+func (v *vertex) String() string {
+	return fmt.Sprintf("element: %v, in-degree: %v, out-degree: %v", v.element, len(v.in), len(v.out))
+}
+
+func (v *vertex) expandString() string {
 	var out, in string
 
 	if len(v.in) > 0 {
 		in = v.in[0].element
 
-		for _, r := range v.in[1:] {
-			in += "," + r.element
+		for _, u := range v.in[1:] {
+			in += "," + u.element
 		}
 	}
 
 	if len(v.out) > 0 {
 		out = v.out[0].element
 
-		for _, r := range v.out[1:] {
-			out += "," + r.element
+		for _, u := range v.out[1:] {
+			out += "," + u.element
 		}
 	}
 
@@ -69,4 +74,30 @@ func (g *digraph) getVertex(d string) *vertex {
 	v, _ := g.vertices[d]
 	g.lock.RUnlock()
 	return v
+}
+
+func (g *digraph) String() string {
+	outdeg := 0
+
+	for v := range g.vertices {
+		outdeg += len(g.getVertex(v).out)
+	}
+
+	return fmt.Sprintf("number of nodes: %v, number of edges: %v", len(g.vertices), outdeg)
+}
+
+func (g *digraph) expandString() (result string) {
+	sep := "\n"
+
+	for _, v := range g.vertices {
+		result += v.expandString() + sep
+	}
+
+	return
+}
+
+func (g *digraph) serialize(path string) {
+	file, _ := os.OpenFile(path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+	defer file.Close()
+	file.WriteString(g.expandString())
 }

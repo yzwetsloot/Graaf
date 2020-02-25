@@ -12,7 +12,7 @@ G = nx.DiGraph()
 
 
 def main():
-    with open('urls.txt', encoding='utf8') as fh:
+    with open('graph.txt', encoding='utf8') as fh:
         for line in fh:
             parse(line)
 

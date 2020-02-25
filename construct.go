@@ -2,37 +2,31 @@ package main
 
 import (
 	"fmt"
+	"golang.org/x/net/publicsuffix"
 	"net/http"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"golang.org/x/net/html"
-	"golang.org/x/net/publicsuffix"
 )
 
 const (
 	baseURL  string = "https://nl.pepper.com"
-	maxDepth uint16 = 8
+	maxDepth uint16 = 20
 )
 
-var (
-	g = digraph{
-		vertices: map[string]*vertex{},
-		lock:     sync.RWMutex{},
-	}
-)
+var wg   = sync.WaitGroup{}
 
-var (
-	lock = sync.RWMutex{}
-	wg   = sync.WaitGroup{}
-)
+var g = digraph{
+	vertices: map[string]*vertex{},
+	lock:     sync.RWMutex{},
+}
 
 var client = http.Client{
-	Timeout: 20 * time.Second,
+	Timeout: 30 * time.Second,
 }
 
 func main() {
@@ -55,25 +49,25 @@ func main() {
 	go retrieve(baseURL, depth, &t)
 	wg.Wait()
 
-	fmt.Println("Operation took", time.Since(start))
+	fmt.Println("operation took", time.Since(start))
 
-	writeVertices(g.vertices)
+	g.serialize("graph.txt")
 }
 
-func retrieve(u string, d uint16, p *vertex) {
+func retrieve(src string, d uint16, p *vertex) {
 	defer wg.Done()
 
 	if d == maxDepth {
 		return
 	}
 
-	response, err := client.Get(u)
+	response, err := client.Get(src)
 
 	if err != nil {
 		return
 	}
 
-	fmt.Println(u)
+	fmt.Println(src)
 
 	tokenizer := html.NewTokenizer(response.Body)
 	defer response.Body.Close()
@@ -88,16 +82,16 @@ Loop:
 		case html.ErrorToken:
 			break Loop
 		case html.StartTagToken:
-			temp := tokenizer.Token()
+			t := tokenizer.Token()
 
-			isAnchor := temp.Data == "a"
+			isAnchor := t.Data == "a"
 
 			if isAnchor {
-				for _, attribute := range temp.Attr {
+				for _, attribute := range t.Attr {
 					if attribute.Key == "href" {
-						dom, err := parseBaseURL(attribute.Val)
+						base, err := parseBaseURL(attribute.Val)
 						if err == nil {
-							links[dom] = struct{}{}
+							links[base] = struct{}{}
 						}
 					}
 				}
@@ -105,24 +99,24 @@ Loop:
 		}
 	}
 
-	for k := range links {
-		kTLD, _ := parseTLD(k)
+	for link := range links {
+		destTLD, _ := parseTLD(link)
 		t := vertex{
-			element: kTLD,
+			element: destTLD,
 			in:      []*vertex{p},
 			out:     []*vertex{},
 			lock:    sync.RWMutex{},
 		}
 
-		if !g.containsDomain(kTLD) {
+		if !g.containsDomain(destTLD) {
 			g.addVertex(&t)
 			p.addOutgoing(&t)
 
 			wg.Add(1)
-			go retrieve(k, d+1, &t)
+			go retrieve(link, d+1, &t)
 		} else {
-			uTLD, _ := parseTLD(u)
-			g.getVertex(kTLD).addIncoming(g.getVertex(uTLD))
+			srcTLD, _ := parseTLD(src)
+			g.getVertex(destTLD).addIncoming(g.getVertex(srcTLD))
 		}
 	}
 }
@@ -133,14 +127,14 @@ func parseBaseURL(u string) (string, error) {
 	if err == nil && (v.Scheme == "https" || v.Scheme == "http") {
 		return v.Scheme + "://" + v.Hostname(), nil
 	}
-	return "", fmt.Errorf("Domain could not be parsed")
+	return "", fmt.Errorf("domain could not be parsed")
 }
 
 func parseTLD(u string) (string, error) {
 	v, err := url.Parse(u)
 	if err == nil {
 		// ignore non-http[s] schemes
-		if v.Scheme == "https" || v.Scheme == "http" {
+		if v.Scheme == "http" || v.Scheme == "https" {
 			h := v.Hostname()
 			sep := "."
 
@@ -158,21 +152,9 @@ func parseTLD(u string) (string, error) {
 				t := r[len(r)-1] + sep + extension // get root domain + extension
 				return t, err
 			}
-			return "", fmt.Errorf("Incorrect URL format")
+			return "", fmt.Errorf("incorrect URL format")
 		}
-		return "", fmt.Errorf("Wrong scheme")
+		return "", fmt.Errorf("wrong scheme")
 	}
-	return "", fmt.Errorf("Could not parse domain")
-}
-
-func writeVertices(vertices map[string]*vertex) {
-	sep := "\n"
-
-	file, _ := os.OpenFile("urls.txt", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
-	defer file.Close()
-
-	for _, v := range vertices {
-		t := v.customString() + sep
-		file.WriteString(t)
-	}
+	return "", fmt.Errorf("could not parse domain")
 }
