@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/yzwetsloot/Graaf/graph"
 	"net/http"
 	"net/url"
 	"runtime"
@@ -21,9 +22,9 @@ const (
 
 var wg = sync.WaitGroup{}
 
-var g = digraph{
-	vertices: map[string]*vertex{},
-	lock:     sync.RWMutex{},
+var g = graph.Digraph{
+	Vertices: map[string]*graph.Vertex{},
+	Lock:     sync.RWMutex{},
 }
 
 var client = http.Client{
@@ -39,14 +40,14 @@ func main() {
 
 	baseTLD, _ := parseTLD(baseURL)
 
-	t := vertex{
-		element: baseTLD,
-		in:      []*vertex{},
-		out:     []*vertex{},
-		lock:    sync.RWMutex{},
+	t := graph.Vertex{
+		Element: baseTLD,
+		In:      []*graph.Vertex{},
+		Out:     []*graph.Vertex{},
+		Lock:    sync.RWMutex{},
 	}
 
-	g.addVertex(&t)
+	g.AddVertex(&t)
 
 	wg.Add(1)
 	go retrieve(baseURL, depth, &t)
@@ -54,12 +55,12 @@ func main() {
 
 	fmt.Println("operation took", time.Since(start))
 
-	g.serialize("graph.txt")
+	g.Serialize("graph.txt")
 
-	fmt.Println(g.shortestPath("pepper.com", "nypost.com"))
+	fmt.Println(g.ShortestPath("pepper.com", "nypost.com"))
 }
 
-func retrieve(src string, d uint16, p *vertex) {
+func retrieve(src string, d uint16, p *graph.Vertex) {
 	defer wg.Done()
 
 	if d == maxDepth {
@@ -106,23 +107,23 @@ Loop:
 
 	for link := range links {
 		destTLD, _ := parseTLD(link)
-		t := vertex{
-			element: destTLD,
-			in:      []*vertex{p},
-			out:     []*vertex{},
-			lock:    sync.RWMutex{},
+		t := graph.Vertex{
+			Element: destTLD,
+			In:      []*graph.Vertex{p},
+			Out:     []*graph.Vertex{},
+			Lock:    sync.RWMutex{},
 		}
 
-		v, ok := g.getVertex(destTLD)
+		v, ok := g.GetVertex(destTLD)
 
 		if !ok {
-			g.addVertex(&t)
-			p.addOutgoing(&t)
+			g.AddVertex(&t)
+			p.AddOutgoing(&t)
 
 			wg.Add(1)
 			go retrieve(link, d+1, &t)
-		} else if p.element != destTLD {
-			v.addIncoming(p)
+		} else if p.Element != destTLD {
+			v.AddIncoming(p)
 		}
 	}
 }
