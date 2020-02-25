@@ -51,6 +51,21 @@ func (v *vertex) expandString() string {
 	return fmt.Sprintf("%v;%v;%v", v.element, in, out)
 }
 
+type path []*vertex
+
+func (p path) String() string {
+	if len(p) > 0 {
+		result := p[len(p)-1].element
+
+		for _, v := range p[:len(p)-1] {
+			result = v.element + " -> " + result
+		}
+
+		return result
+	}
+	return ""
+}
+
 type digraph struct {
 	vertices map[string]*vertex
 	lock     sync.RWMutex

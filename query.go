@@ -2,28 +2,30 @@ package main
 
 import "fmt"
 
-func (g *digraph) shortestPath(src, dest string) (string, error) {
+func (g *digraph) shortestPath(src, dest string) (path, error) {
 	start, end := g.vertices[src], g.vertices[dest]
 
 	tree := bfs(start)
 
+	var p path
+
 	if prev, ok := tree[end]; ok {
-		result := end.element
+		p = append(path{end}, p...)
 
 		for prev != nil {
-			result = prev.element + " -> " + result
+			p = append(path{prev}, p...)
 			prev = tree[prev]
 		}
-		return result, nil
+		return p, nil
 	}
-	return "", fmt.Errorf("destination not reachable from source")
+	return p, fmt.Errorf("destination not reachable from source")
 }
 
 func bfs(src *vertex) map[*vertex]*vertex {
 	tree := map[*vertex]*vertex{}
 	visited := map[*vertex]bool{}
 
-	q := []*vertex{}
+	var q []*vertex
 
 	visited[src] = true
 	q = append(q, src)
