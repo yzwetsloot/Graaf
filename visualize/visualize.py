@@ -3,14 +3,14 @@ import json
 import matplotlib.pyplot as plt
 import networkx as nx
 
-with open('config/config.json') as config:
+with open('../config/config.json') as config:
     parameters = json.load(config)
 
 G = nx.DiGraph()
 
 
 def main():
-    with open('graph.txt', encoding='utf8') as fh:
+    with open('../graph.txt', encoding='utf8') as fh:
         for line in fh:
             parse(line)
 

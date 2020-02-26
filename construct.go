@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/yzwetsloot/Graaf/graph"
 	"net/http"
 	"net/url"
 	"runtime"
@@ -11,13 +10,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/yzwetsloot/Graaf/graph"
+
 	"golang.org/x/net/html"
 	"golang.org/x/net/publicsuffix"
 )
 
 const (
-	baseURL  string = "https://nl.pepper.com"
-	maxDepth uint16 = 5
+	baseURL  string = ""
+	maxDepth uint16 = 1
 )
 
 var wg = sync.WaitGroup{}
@@ -27,8 +28,8 @@ var g = graph.Digraph{
 	Lock:     sync.RWMutex{},
 }
 
-var client = http.Client{
-	Timeout: 30 * time.Second,
+var client = &http.Client{
+	Timeout: 1 * time.Second,
 }
 
 func main() {
@@ -56,8 +57,6 @@ func main() {
 	fmt.Println("operation took", time.Since(start))
 
 	g.Serialize("graph.txt")
-
-	fmt.Println(g.ShortestPath("pepper.com", "nypost.com"))
 }
 
 func retrieve(src string, d uint16, p *graph.Vertex) {
