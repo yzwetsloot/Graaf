@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/yzwetsloot/Graaf/graph"
+	"Graaf/graph"
 
 	"golang.org/x/net/html"
 	"golang.org/x/net/publicsuffix"
